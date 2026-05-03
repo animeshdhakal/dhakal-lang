@@ -23,10 +23,10 @@ pub enum TokenType {
     Semicolon,
 
     // Symbols
-    LParen,
-    RParen,
-    RBrack,
-    LBrack,
+    LeftParenthesis,
+    RightParenthesis,
+    LeftBracket,
+    RightBracket,
 
     // Keywords
     Function,

@@ -75,12 +75,12 @@ impl Lexer {
                 }
             }
             b';' => Token::new(TokenType::Semicolon, ";".to_string()),
-            b'(' => Token::new(TokenType::LParen, "(".to_string()),
-            b')' => Token::new(TokenType::RParen, ")".to_string()),
+            b'(' => Token::new(TokenType::LeftParenthesis, "(".to_string()),
+            b')' => Token::new(TokenType::RightParenthesis, ")".to_string()),
             b',' => Token::new(TokenType::Comma, ",".to_string()),
             b'+' => Token::new(TokenType::Plus, "+".to_string()),
-            b'{' => Token::new(TokenType::LBrack, "{".to_string()),
-            b'}' => Token::new(TokenType::RBrack, "}".to_string()),
+            b'{' => Token::new(TokenType::LeftBracket, "{".to_string()),
+            b'}' => Token::new(TokenType::RightBracket, "}".to_string()),
             b'>' => Token::new(TokenType::GreaterThan, ">".to_string()),
             b'<' => Token::new(TokenType::LessThan, "<".to_string()),
             0 => Token::new(TokenType::Eof, "".to_string()),

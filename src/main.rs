@@ -1,15 +1,26 @@
-use dhakal_lang::lexer::Lexer;
+use std::io::Write;
+use std::io::{self, stdin};
+
+use dhakal_lang::{lexer::Lexer, token::TokenType};
 
 fn main() {
-    let s = r#"
-        let hello = 12;
-    "#;
+    println!("Welcome to dhakal-lang");
 
-    let mut l = Lexer::new(s.to_string());
+    loop {
+        print!(">> ");
+        io::stdout().flush().unwrap();
 
-    for i in 0..7 {
-        println!("{:?}", l.next_token());
+        let mut input = String::new();
+        stdin().read_line(&mut input).unwrap();
+
+        let mut lexer = Lexer::new(input.to_string());
+
+        'token_loop: loop {
+            let token = lexer.next_token();
+            println!("{:#?}", token);
+            if token.token_type == TokenType::Eof {
+                break 'token_loop;
+            }
+        }
     }
-
-    println!("Hello, world!");
 }
