@@ -1,6 +1,7 @@
 use std::io::Write;
 use std::io::{self, stdin};
 
+use dhakal_lang::parser::Parser;
 use dhakal_lang::{lexer::Lexer, token::TokenType};
 
 fn main() {
@@ -15,12 +16,10 @@ fn main() {
 
         let mut lexer = Lexer::new(input.to_string());
 
-        'token_loop: loop {
-            let token = lexer.next_token();
-            println!("{:#?}", token);
-            if token.token_type == TokenType::Eof {
-                break 'token_loop;
-            }
-        }
+        let mut parser = Parser::new(&mut lexer);
+        let program = parser.parse_program();
+
+        println!("{:#?}", program.statements);
+        println!("{:#?}", parser.errors);
     }
 }
