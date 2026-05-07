@@ -1,16 +1,11 @@
-use std::{collections::HashMap, sync::Arc};
-
 use crate::{
     ast::{
-        BooleanLiteral, Expression, ExpressionStatement, Identifier, InfixExpression,
+        BooleanLiteral, Expression, ExpressionStatement, Identifier, IfExpression, InfixExpression,
         IntegerLiteral, LetStatement, PrefixExpression, Program, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
 };
-
-type PrefixFn<'a> = fn(&mut Parser<'a>) -> Expression;
-type InfixFn<'a> = fn(&mut Parser<'a>, Expression) -> Expression;
 
 pub struct Parser<'a> {
     lexer: &'a mut Lexer,
@@ -56,7 +51,6 @@ impl<'a> Parser<'a> {
             lexer: lexer,
             current_token: Token::new(TokenType::Illegal, "".to_string()),
             peek_token: Token::new(TokenType::Illegal, "".to_string()),
-
             errors: Vec::new(),
         };
 
@@ -106,6 +100,77 @@ impl<'a> Parser<'a> {
         Some(Statement::Let(statement))
     }
 
+    pub fn parse_grouped_expression(&mut self) -> Option<Expression> {
+        self.next_token();
+
+        let expression = self.parse_expression(Precedence::Lowest);
+
+        if expression.is_none() {
+            return None;
+        }
+
+        if !self.expect_peek(TokenType::RightParenthesis) {
+            return None;
+        }
+
+        expression
+    }
+
+    pub fn parse_if_expression(&mut self) -> Option<Expression> {
+        if !self.expect_peek(TokenType::LeftParenthesis) {
+            return None;
+        }
+
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::Lowest)?;
+
+        if !self.expect_peek(TokenType::RightParenthesis) {
+            return None;
+        }
+
+        if !self.expect_peek(TokenType::LeftBrace) {
+            return None;
+        }
+
+        let consequence = self.parse_block_statement();
+
+        let mut alternative: Vec<Statement> = Vec::new();
+
+        if self.peek_token.token_type == TokenType::Else {
+            self.next_token();
+
+            if !self.expect_peek(TokenType::LeftBrace) {
+                return None;
+            }
+
+            alternative = self.parse_block_statement();
+        }
+
+        Some(Expression::If(IfExpression {
+            condition: Box::new(condition),
+            consequence,
+            alternative,
+        }))
+    }
+
+    pub fn parse_block_statement(&mut self) -> Vec<Statement> {
+        let mut statements = Vec::new();
+
+        self.next_token();
+
+        while self.current_token.token_type != TokenType::RightBrace
+            && self.current_token.token_type != TokenType::Eof
+        {
+            if let Some(statement) = self.parse_statement() {
+                statements.push(statement);
+            }
+            self.next_token();
+        }
+
+        statements
+    }
+
     pub fn parse_return_statement(&mut self) -> Option<Statement> {
         None // Implement when ready
     }
@@ -128,6 +193,8 @@ impl<'a> Parser<'a> {
             TokenType::False => self.parse_boolean(),
             TokenType::Bang => self.parse_prefix(),
             TokenType::Minus => self.parse_prefix(),
+            TokenType::LeftParenthesis => self.parse_grouped_expression(),
+            TokenType::If => self.parse_if_expression(),
             _ => None,
         }
     }

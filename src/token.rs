@@ -25,6 +25,8 @@ pub enum TokenType {
     // Symbols
     LeftParenthesis,
     RightParenthesis,
+    LeftBrace,
+    RightBrace,
     LeftBracket,
     RightBracket,
 

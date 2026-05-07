@@ -1,9 +1,9 @@
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Identifier {
     pub value: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IntegerLiteral {
     pub value: u64,
 }
@@ -13,51 +13,60 @@ pub struct BooleanLiteral {
     pub value: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixExpression {
     pub operator: String,
     pub right: Box<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InfixExpression {
     pub left: Box<Expression>,
     pub operator: String,
     pub right: Box<Expression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct IfExpression {
+    pub condition: Box<Expression>,
+    pub consequence: Vec<Statement>,
+    pub alternative: Vec<Statement>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
     Identifier(Identifier),
     Boolean(BooleanLiteral),
     Integer(IntegerLiteral),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
+    If(IfExpression),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExpressionStatement {
     pub expression: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct LetStatement {
     pub name: Identifier,
     pub value: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ReturnStatement {
     pub return_value: Expression,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
     Expression(ExpressionStatement),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Program {
     pub statements: Vec<Statement>,
 }
