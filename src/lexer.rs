@@ -80,6 +80,8 @@ impl Lexer {
             b',' => Token::new(TokenType::Comma, ",".to_string()),
             b'+' => Token::new(TokenType::Plus, "+".to_string()),
             b'-' => Token::new(TokenType::Minus, "-".to_string()),
+            b'*' => Token::new(TokenType::Asterisk, "*".to_string()),
+            b'/' => Token::new(TokenType::Slash, "/".to_string()),
             b'{' => Token::new(TokenType::LeftBrace, "{".to_string()),
             b'}' => Token::new(TokenType::RightBrace, "}".to_string()),
             b'[' => Token::new(TokenType::LeftBracket, "[".to_string()),

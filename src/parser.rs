@@ -1,7 +1,8 @@
 use crate::{
     ast::{
-        BooleanLiteral, Expression, ExpressionStatement, Identifier, IfExpression, InfixExpression,
-        IntegerLiteral, LetStatement, PrefixExpression, Program, Statement,
+        BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionExpression,
+        Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
+        Program, ReturnStatement, Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -40,6 +41,8 @@ pub fn get_precedence(token: &Token) -> Precedence {
 
         TokenType::Slash => Precedence::Product,
         TokenType::Asterisk => Precedence::Product,
+
+        TokenType::LeftParenthesis => Precedence::Call,
 
         _ => Precedence::Lowest,
     }
@@ -154,6 +157,107 @@ impl<'a> Parser<'a> {
         }))
     }
 
+    pub fn parse_function_expression(&mut self) -> Option<Expression> {
+        if !self.expect_peek(TokenType::Identifier) {
+            return None;
+        }
+
+        let name = Identifier {
+            value: self.current_token.literal.clone(),
+        };
+
+        if !self.expect_peek(TokenType::LeftParenthesis) {
+            return None;
+        }
+
+        let parameters = self.parse_function_parameters();
+
+        if !self.expect_peek(TokenType::LeftBrace) {
+            return None;
+        }
+
+        let block = self.parse_block_statement();
+
+        Some(Expression::Function(FunctionExpression {
+            name,
+            body: block,
+            parameters,
+        }))
+    }
+
+    pub fn parse_call_arguments(&mut self) -> Vec<Expression> {
+        let mut arguments: Vec<Expression> = Vec::new();
+
+        if self.expect_peek(TokenType::RightParenthesis) {
+            return arguments;
+        }
+
+        self.next_token();
+
+        arguments.push(self.parse_expression(Precedence::Lowest).unwrap());
+
+        while self.peek_token.token_type == TokenType::Comma {
+            self.next_token();
+            self.next_token();
+
+            let expression = self.parse_expression(Precedence::Lowest);
+
+            if let Some(expression) = expression {
+                arguments.push(expression);
+            } else {
+                return Vec::new();
+            }
+        }
+
+        if !self.expect_peek(TokenType::RightParenthesis) {
+            return Vec::new();
+        }
+
+        arguments
+    }
+
+    pub fn parse_call_expression(&mut self, left: Expression) -> Option<Expression> {
+        let Expression::Identifier(identifier) = left else {
+            return None;
+        };
+
+        let arguments = self.parse_call_arguments();
+
+        Some(Expression::Call(CallExpression {
+            name: identifier,
+            arguments,
+        }))
+    }
+
+    pub fn parse_function_parameters(&mut self) -> Vec<Identifier> {
+        let mut identifiers: Vec<Identifier> = Vec::new();
+
+        if self.expect_peek(TokenType::RightParenthesis) {
+            return identifiers;
+        }
+
+        self.next_token();
+
+        identifiers.push(Identifier {
+            value: self.current_token.literal.clone(),
+        });
+
+        while self.peek_token.token_type == TokenType::Comma {
+            self.next_token();
+            self.next_token();
+
+            identifiers.push(Identifier {
+                value: self.current_token.literal.clone(),
+            });
+        }
+
+        if !self.expect_peek(TokenType::RightParenthesis) {
+            return Vec::new();
+        }
+
+        identifiers
+    }
+
     pub fn parse_block_statement(&mut self) -> Vec<Statement> {
         let mut statements = Vec::new();
 
@@ -172,7 +276,18 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_return_statement(&mut self) -> Option<Statement> {
-        None // Implement when ready
+        self.next_token();
+        let expression = self.parse_expression(Precedence::Lowest);
+
+        if expression.is_none() {
+            return None;
+        }
+
+        let expression = expression.unwrap();
+
+        Some(Statement::Return(ReturnStatement {
+            return_value: expression,
+        }))
     }
 
     pub fn parse_expression_statement(&mut self) -> Option<Statement> {
@@ -195,6 +310,7 @@ impl<'a> Parser<'a> {
             TokenType::Minus => self.parse_prefix(),
             TokenType::LeftParenthesis => self.parse_grouped_expression(),
             TokenType::If => self.parse_if_expression(),
+            TokenType::Function => self.parse_function_expression(),
             _ => None,
         }
     }
@@ -209,6 +325,7 @@ impl<'a> Parser<'a> {
             TokenType::NotEquals => self.parse_infix(left),
             TokenType::GreaterThan => self.parse_infix(left),
             TokenType::LessThan => self.parse_infix(left),
+            TokenType::LeftParenthesis => self.parse_call_expression(left),
             _ => None,
         }
     }

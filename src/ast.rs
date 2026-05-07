@@ -34,6 +34,19 @@ pub struct IfExpression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct FunctionExpression {
+    pub name: Identifier,
+    pub body: Vec<Statement>,
+    pub parameters: Vec<Identifier>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CallExpression {
+    pub name: Identifier,
+    pub arguments: Vec<Expression>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
     Identifier(Identifier),
     Boolean(BooleanLiteral),
@@ -41,6 +54,8 @@ pub enum Expression {
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     If(IfExpression),
+    Function(FunctionExpression),
+    Call(CallExpression),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

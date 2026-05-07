@@ -2,7 +2,7 @@ use std::io::Write;
 use std::io::{self, stdin};
 
 use dhakal_lang::parser::Parser;
-use dhakal_lang::{lexer::Lexer, token::TokenType};
+use dhakal_lang::lexer::Lexer;
 
 fn main() {
     println!("Welcome to dhakal-lang");
