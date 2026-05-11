@@ -5,6 +5,8 @@ pub struct Lexer {
     position: usize,
     read_position: usize,
     ch: u8,
+    line: usize,
+    column: usize,
 }
 
 impl Lexer {
@@ -14,6 +16,8 @@ impl Lexer {
             position: 0,
             read_position: 0,
             ch: 0,
+            line: 1,
+            column: 0,
         };
         lexer.read_char();
         lexer
@@ -28,6 +32,13 @@ impl Lexer {
 
         self.position = self.read_position;
         self.read_position += 1;
+
+        if self.ch == b'\n' {
+            self.line += 1;
+            self.column = 0;
+        } else {
+            self.column += 1;
+        }
     }
 
     pub fn peek_char(&self) -> u8 {
@@ -66,53 +77,68 @@ impl Lexer {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
+        let line = self.line;
+        let column = self.column;
+        let mk = |t, l: &str| Token::with_position(t, l.to_string(), line, column);
+
         let token = match self.ch {
             b'=' => {
                 if self.peek_char() == b'=' {
                     self.read_char();
-                    Token::new(TokenType::Equals, "==".to_string())
+                    mk(TokenType::Equals, "==")
                 } else {
-                    Token::new(TokenType::Assign, "=".to_string())
+                    mk(TokenType::Assign, "=")
                 }
             }
             b'!' => {
                 if self.peek_char() == b'=' {
                     self.read_char();
-                    Token::new(TokenType::NotEquals, "!=".to_string())
+                    mk(TokenType::NotEquals, "!=")
                 } else {
-                    Token::new(TokenType::Bang, "!".to_string())
+                    mk(TokenType::Bang, "!")
                 }
             }
-            b';' => Token::new(TokenType::Semicolon, ";".to_string()),
-            b'(' => Token::new(TokenType::LeftParenthesis, "(".to_string()),
-            b')' => Token::new(TokenType::RightParenthesis, ")".to_string()),
-            b',' => Token::new(TokenType::Comma, ",".to_string()),
-            b'+' => Token::new(TokenType::Plus, "+".to_string()),
-            b'-' => Token::new(TokenType::Minus, "-".to_string()),
-            b'*' => Token::new(TokenType::Asterisk, "*".to_string()),
-            b'/' => Token::new(TokenType::Slash, "/".to_string()),
-            b'{' => Token::new(TokenType::LeftBrace, "{".to_string()),
-            b'}' => Token::new(TokenType::RightBrace, "}".to_string()),
-            b'[' => Token::new(TokenType::LeftBracket, "[".to_string()),
-            b']' => Token::new(TokenType::RightBracket, "]".to_string()),
+            b';' => mk(TokenType::Semicolon, ";"),
+            b'(' => mk(TokenType::LeftParenthesis, "("),
+            b')' => mk(TokenType::RightParenthesis, ")"),
+            b',' => mk(TokenType::Comma, ","),
+            b'+' => mk(TokenType::Plus, "+"),
+            b'-' => mk(TokenType::Minus, "-"),
+            b'*' => mk(TokenType::Asterisk, "*"),
+            b'/' => mk(TokenType::Slash, "/"),
+            b'{' => mk(TokenType::LeftBrace, "{"),
+            b'}' => mk(TokenType::RightBrace, "}"),
+            b'[' => mk(TokenType::LeftBracket, "["),
+            b']' => mk(TokenType::RightBracket, "]"),
+            b'&' => {
+                self.read_char();
+                mk(TokenType::LogicalAnd, "&&")
+            }
+            b'|' => {
+                self.read_char();
+                mk(TokenType::LogicalOr, "||")
+            }
             b'>' => {
                 if self.peek_char() == b'=' {
                     self.read_char();
-                    Token::new(TokenType::GreaterThanOrEqual, ">=".to_string())
+                    mk(TokenType::GreaterThanOrEqual, ">=")
                 } else {
-                    Token::new(TokenType::GreaterThan, ">".to_string())
+                    mk(TokenType::GreaterThan, ">")
                 }
             }
             b'<' => {
                 if self.peek_char() == b'=' {
                     self.read_char();
-                    Token::new(TokenType::LessThanOrEqual, "<=".to_string())
+                    mk(TokenType::LessThanOrEqual, "<=")
                 } else {
-                    Token::new(TokenType::LessThan, "<".to_string())
+                    mk(TokenType::LessThan, "<")
                 }
             }
-            b'"' => Token::new(TokenType::String, self.read_string()),
-            0 => Token::new(TokenType::Eof, "".to_string()),
+            b'"' => {
+                let s = self.read_string();
+                Token::with_position(TokenType::String, s, line, column)
+            }
+            0 => Token::with_position(TokenType::Eof, String::new(), line, column),
             _ => {
                 if self.ch.is_ascii_alphabetic() {
                     let identifier = self.read_identifier();
@@ -127,11 +153,17 @@ impl Lexer {
                         "for" => TokenType::For,
                         _ => TokenType::Identifier,
                     };
-                    return Token::new(token_type, identifier);
+                    return Token::with_position(token_type, identifier, line, column);
                 } else if self.ch.is_ascii_digit() {
-                    return Token::new(TokenType::Integer, self.read_number());
+                    let number = self.read_number();
+                    return Token::with_position(TokenType::Integer, number, line, column);
                 } else {
-                    Token::new(TokenType::Illegal, (self.ch as char).to_string())
+                    Token::with_position(
+                        TokenType::Illegal,
+                        (self.ch as char).to_string(),
+                        line,
+                        column,
+                    )
                 }
             }
         };

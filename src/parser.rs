@@ -4,6 +4,7 @@ use crate::{
         Identifier, IfStatement, InfixExpression, PrefixExpression, Program, ReturnStatement,
         Statement, ValStatement,
     },
+    error::ParseError,
     lexer::Lexer,
     token::{Token, TokenType},
 };
@@ -13,12 +14,14 @@ pub struct Parser<'a> {
     current_token: Token,
     peek_token: Token,
 
-    pub errors: Vec<String>,
+    pub errors: Vec<ParseError>,
 }
 
 #[derive(PartialEq, PartialOrd, Clone, Debug, Copy)]
 pub enum Precedence {
     Lowest = 1,
+    LogicalOr,
+    LogicalAnd,
     Equals,
     LessGreater,
     Sum,
@@ -37,6 +40,8 @@ pub fn get_precedence(token: &Token) -> Precedence {
         TokenType::LessThan => Precedence::LessGreater,
         TokenType::GreaterThanOrEqual => Precedence::LessGreater,
         TokenType::LessThanOrEqual => Precedence::LessGreater,
+        TokenType::LogicalAnd => Precedence::LogicalAnd,
+        TokenType::LogicalOr => Precedence::LogicalOr,
 
         TokenType::Plus => Precedence::Sum,
         TokenType::Minus => Precedence::Sum,
@@ -72,24 +77,22 @@ impl<'a> Parser<'a> {
 
     pub fn parse_val_statement(&mut self) -> Option<Statement> {
         if !self.expect_peek(TokenType::Identifier) {
-            self.errors
-                .push(format!("Expected Identifier but not found"));
             return None;
         }
 
         let name = self.current_token.literal.clone();
 
         if !self.expect_peek(TokenType::Assign) {
-            self.errors.push(format!(
-                "Expected Assignment operator but found {:?}",
-                self.peek_token.token_type
-            ));
             return None;
         }
 
         self.next_token();
 
         let expression = self.parse_expression(Precedence::Lowest)?;
+
+        if self.peek_token.token_type == TokenType::Semicolon {
+            self.next_token();
+        }
 
         Some(Statement::Val(ValStatement {
             value: expression,
@@ -178,7 +181,8 @@ impl<'a> Parser<'a> {
     pub fn parse_call_arguments(&mut self) -> Vec<Expression> {
         let mut arguments: Vec<Expression> = Vec::new();
 
-        if self.expect_peek(TokenType::RightParenthesis) {
+        if self.peek_token.token_type == TokenType::RightParenthesis {
+            self.next_token();
             return arguments;
         }
 
@@ -211,6 +215,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_call_expression(&mut self, left: Expression) -> Option<Expression> {
         let Expression::Identifier(identifier) = left else {
+            self.current_error("call target must be an identifier");
             return None;
         };
 
@@ -225,7 +230,8 @@ impl<'a> Parser<'a> {
     pub fn parse_function_parameters(&mut self) -> Vec<Identifier> {
         let mut identifiers: Vec<Identifier> = Vec::new();
 
-        if self.expect_peek(TokenType::RightParenthesis) {
+        if self.peek_token.token_type == TokenType::RightParenthesis {
+            self.next_token();
             return identifiers;
         }
 
@@ -272,6 +278,10 @@ impl<'a> Parser<'a> {
         self.next_token();
         let return_value = self.parse_expression(Precedence::Lowest)?;
 
+        if self.peek_token.token_type == TokenType::Semicolon {
+            self.next_token();
+        }
+
         Some(Statement::Return(ReturnStatement { return_value }))
     }
 
@@ -296,7 +306,14 @@ impl<'a> Parser<'a> {
             TokenType::Minus => self.parse_prefix(),
             TokenType::LeftParenthesis => self.parse_grouped_expression(),
             TokenType::Function => self.parse_function_expression(),
-            _ => None,
+            _ => {
+                let msg = format!(
+                    "no prefix parse function for {:?} (`{}`)",
+                    self.current_token.token_type, self.current_token.literal
+                );
+                self.current_error(msg);
+                None
+            }
         }
     }
 
@@ -312,6 +329,8 @@ impl<'a> Parser<'a> {
             TokenType::LessThan => self.parse_infix(left),
             TokenType::GreaterThanOrEqual => self.parse_infix(left),
             TokenType::LessThanOrEqual => self.parse_infix(left),
+            TokenType::LogicalAnd => self.parse_infix(left),
+            TokenType::LogicalOr => self.parse_infix(left),
             TokenType::LeftParenthesis => self.parse_call_expression(left),
             _ => None,
         }
@@ -342,24 +361,33 @@ impl<'a> Parser<'a> {
 
         let initialization = self.parse_statement()?;
 
-        self.next_token();
+        if self.current_token.token_type != TokenType::Semicolon {
+            self.current_error(format!(
+                "expected `;` after for-loop initializer, got {:?} (`{}`)",
+                self.current_token.token_type, self.current_token.literal
+            ));
+            return None;
+        }
         self.next_token();
 
         let condition = self.parse_expression(Precedence::Lowest)?;
 
-        self.next_token();
+        if !self.expect_peek(TokenType::Semicolon) {
+            return None;
+        }
         self.next_token();
 
         let update = self.parse_statement()?;
-        self.next_token();
+
+        if !self.expect_peek(TokenType::RightParenthesis) {
+            return None;
+        }
 
         if !self.expect_peek(TokenType::LeftBrace) {
             return None;
         }
 
         let body = self.parse_block_statement();
-
-        self.next_token();
 
         Some(Statement::For(ForStatement {
             initialization: Box::new(initialization),
@@ -384,8 +412,27 @@ impl<'a> Parser<'a> {
             self.next_token();
             true
         } else {
+            self.peek_error(token_type);
             false
         }
+    }
+
+    fn peek_error(&mut self, expected: TokenType) {
+        let msg = format!(
+            "expected next token to be {:?}, got {:?} (`{}`) instead",
+            expected, self.peek_token.token_type, self.peek_token.literal
+        );
+        self.errors.push(ParseError::new(
+            msg,
+            self.peek_token.line,
+            self.peek_token.column,
+        ));
+    }
+
+    fn current_error(&mut self, message: impl Into<String>) {
+        let line = self.current_token.line;
+        let column = self.current_token.column;
+        self.errors.push(ParseError::new(message, line, column));
     }
 
     pub fn parse_program(&mut self) -> Program {
@@ -410,8 +457,17 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_integer(&mut self) -> Option<Expression> {
-        let integer: u64 = self.current_token.literal.parse::<u64>().unwrap();
-        Some(Expression::Integer(integer))
+        match self.current_token.literal.parse::<u64>() {
+            Ok(integer) => Some(Expression::Integer(integer)),
+            Err(err) => {
+                let msg = format!(
+                    "could not parse `{}` as integer: {}",
+                    self.current_token.literal, err
+                );
+                self.current_error(msg);
+                None
+            }
+        }
     }
 
     pub fn parse_string(&mut self) -> Option<Expression> {

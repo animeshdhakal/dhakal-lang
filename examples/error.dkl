@@ -1,0 +1,5 @@
+func hello(a, b, c) {
+	write("Hello");	
+}
+
+hello(1, a, 3);

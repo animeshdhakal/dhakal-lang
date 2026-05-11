@@ -17,19 +17,25 @@ struct Args {
     path: Option<PathBuf>,
 }
 
-fn run(source: String, evaluator: &mut Eval) -> Vec<Object> {
+fn run(source: String, evaluator: &mut Eval) -> Result<Vec<Object>, ()> {
     let mut lexer = Lexer::new(source);
     let mut parser = dhakal_lang::parser::Parser::new(&mut lexer);
     let program = parser.parse_program();
 
     if !parser.errors.is_empty() {
         for error in &parser.errors {
-            eprintln!("parse error: {error}");
+            eprintln!("{error}");
         }
-        return Vec::new();
+        return Err(());
     }
 
-    evaluator.eval_program(program)
+    match evaluator.eval_program(program) {
+        Ok(results) => Ok(results),
+        Err(error) => {
+            eprintln!("{error}");
+            Err(())
+        }
+    }
 }
 
 fn print_results(results: Vec<Object>) {
@@ -66,7 +72,9 @@ fn repl() {
             continue;
         }
 
-        print_results(run(input, &mut evaluator));
+        if let Ok(results) = run(input, &mut evaluator) {
+            print_results(results);
+        }
     }
 }
 
@@ -92,7 +100,11 @@ fn main() -> ExitCode {
     };
 
     let mut evaluator = Eval::new();
-    print_results(run(contents, &mut evaluator));
-
-    ExitCode::SUCCESS
+    match run(contents, &mut evaluator) {
+        Ok(results) => {
+            print_results(results);
+            ExitCode::SUCCESS
+        }
+        Err(()) => ExitCode::FAILURE,
+    }
 }
