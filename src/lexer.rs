@@ -54,6 +54,15 @@ impl Lexer {
         self.input[starting_position..self.position].to_string()
     }
 
+    pub fn read_string(&mut self) -> String {
+        self.read_char();
+        let starting_position = self.position;
+        while self.ch != b'"' && self.ch != 0 {
+            self.read_char();
+        }
+        self.input[starting_position..self.position].to_string()
+    }
+
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
 
@@ -102,6 +111,7 @@ impl Lexer {
                     Token::new(TokenType::LessThan, "<".to_string())
                 }
             }
+            b'"' => Token::new(TokenType::String, self.read_string()),
             0 => Token::new(TokenType::Eof, "".to_string()),
             _ => {
                 if self.ch.is_ascii_alphabetic() {

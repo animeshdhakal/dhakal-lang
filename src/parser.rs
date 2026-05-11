@@ -1,8 +1,8 @@
 use crate::{
     ast::{
-        BooleanLiteral, CallExpression, Expression, ExpressionStatement, FunctionExpression,
-        Identifier, IfExpression, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression,
-        Program, ReturnStatement, Statement,
+        CallExpression, Expression, ExpressionStatement, FunctionExpression, Identifier,
+        IfStatement, InfixExpression, LetStatement, PrefixExpression, Program, ReturnStatement,
+        Statement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -109,7 +109,7 @@ impl<'a> Parser<'a> {
         Some(expression)
     }
 
-    pub fn parse_if_expression(&mut self) -> Option<Expression> {
+    pub fn parse_if_statement(&mut self) -> Option<Statement> {
         if !self.expect_peek(TokenType::LeftParenthesis) {
             return None;
         }
@@ -140,7 +140,7 @@ impl<'a> Parser<'a> {
             alternative = self.parse_block_statement();
         }
 
-        Some(Expression::If(IfExpression {
+        Some(Statement::If(IfStatement {
             condition: Box::new(condition),
             consequence,
             alternative,
@@ -184,7 +184,10 @@ impl<'a> Parser<'a> {
 
         self.next_token();
 
-        arguments.push(self.parse_expression(Precedence::Lowest).unwrap());
+        match self.parse_expression(Precedence::Lowest) {
+            Some(expression) => arguments.push(expression),
+            None => return Vec::new(),
+        }
 
         while self.peek_token.token_type == TokenType::Comma {
             self.next_token();
@@ -286,12 +289,12 @@ impl<'a> Parser<'a> {
         match self.current_token.token_type {
             TokenType::Identifier => self.parse_identifier(),
             TokenType::Integer => self.parse_integer(),
+            TokenType::String => self.parse_string(),
             TokenType::True => self.parse_boolean(),
             TokenType::False => self.parse_boolean(),
             TokenType::Bang => self.parse_prefix(),
             TokenType::Minus => self.parse_prefix(),
             TokenType::LeftParenthesis => self.parse_grouped_expression(),
-            TokenType::If => self.parse_if_expression(),
             TokenType::Function => self.parse_function_expression(),
             _ => None,
         }
@@ -334,6 +337,7 @@ impl<'a> Parser<'a> {
         match self.current_token.token_type {
             TokenType::Let => self.parse_let_statement(),
             TokenType::Return => self.parse_return_statement(),
+            TokenType::If => self.parse_if_statement(),
             _ => self.parse_expression_statement(),
         }
     }
@@ -370,11 +374,16 @@ impl<'a> Parser<'a> {
 
     pub fn parse_integer(&mut self) -> Option<Expression> {
         let integer: u64 = self.current_token.literal.parse::<u64>().unwrap();
-        Some(Expression::Integer(IntegerLiteral { value: integer }))
+        Some(Expression::Integer(integer))
     }
+
+    pub fn parse_string(&mut self) -> Option<Expression> {
+        Some(Expression::String(self.current_token.literal.clone()))
+    }
+
     pub fn parse_boolean(&mut self) -> Option<Expression> {
         let value = self.current_token.token_type == TokenType::True;
-        Some(Expression::Boolean(BooleanLiteral { value }))
+        Some(Expression::Boolean(value))
     }
 
     pub fn parse_prefix(&mut self) -> Option<Expression> {

@@ -3,16 +3,6 @@ pub struct Identifier {
     pub value: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct IntegerLiteral {
-    pub value: u64,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct BooleanLiteral {
-    pub value: bool,
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PrefixExpression {
     pub operator: String,
@@ -27,7 +17,7 @@ pub struct InfixExpression {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct IfExpression {
+pub struct IfStatement {
     pub condition: Box<Expression>,
     pub consequence: Vec<Statement>,
     pub alternative: Vec<Statement>,
@@ -49,11 +39,11 @@ pub struct CallExpression {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Expression {
     Identifier(Identifier),
-    Boolean(BooleanLiteral),
-    Integer(IntegerLiteral),
+    String(String),
+    Boolean(bool),
+    Integer(u64),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
-    If(IfExpression),
     Function(FunctionExpression),
     Call(CallExpression),
 }
@@ -78,6 +68,7 @@ pub struct ReturnStatement {
 pub enum Statement {
     Let(LetStatement),
     Return(ReturnStatement),
+    If(IfStatement),
     Expression(ExpressionStatement),
 }
 

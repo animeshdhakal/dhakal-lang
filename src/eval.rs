@@ -42,8 +42,9 @@ impl Eval {
         environment: &mut Environment,
     ) -> Object {
         match expression {
-            Expression::Integer(integer) => Object::Integer(integer.value as i64),
-            Expression::Boolean(boolean) => Object::Boolean(boolean.value),
+            Expression::Integer(value) => Object::Integer(*value as i64),
+            Expression::Boolean(value) => Object::Boolean(*value),
+            Expression::String(str) => Object::String(str.clone()),
             Expression::Identifier(identifier) => environment
                 .bindings
                 .get(&identifier.value)
@@ -78,21 +79,6 @@ impl Eval {
 
                 Object::Null
             }
-            Expression::If(if_expression) => {
-                let condition = self.eval_expression(&if_expression.condition, environment);
-
-                let Object::Boolean(condition) = condition else {
-                    return Object::Null;
-                };
-
-                let branch = if condition {
-                    &if_expression.consequence
-                } else {
-                    &if_expression.alternative
-                };
-
-                self.eval_block(branch, environment)
-            }
             Expression::Function(func) => {
                 let obj = Object::Function {
                     name: func.name.value.clone(),
@@ -103,6 +89,16 @@ impl Eval {
                 obj
             }
             Expression::Call(call) => {
+                if call.name.value == "print" {
+                    let parts: Vec<String> = call
+                        .arguments
+                        .iter()
+                        .map(|argument| self.eval_expression(argument, environment).to_string())
+                        .collect();
+                    println!("{}", parts.join(" "));
+                    return Object::Null;
+                }
+
                 let Some(function) = self.functions.get(&call.name.value).cloned() else {
                     return Object::Null;
                 };
@@ -170,16 +166,31 @@ impl Eval {
                     .insert(let_statement.name.value.clone(), value);
                 Object::Null
             }
+            Statement::If(if_statement) => {
+                let condition = self.eval_expression(&if_statement.condition, environment);
+
+                let Object::Boolean(condition) = condition else {
+                    return Object::Null;
+                };
+
+                let branch = if condition {
+                    &if_statement.consequence
+                } else {
+                    &if_statement.alternative
+                };
+
+                self.eval_block(branch, environment)
+            }
         }
     }
 
-    pub fn eval_program(&mut self, program: Program) {
+    pub fn eval_program(&mut self, program: Program) -> Vec<Object> {
         let mut environment = Environment::new();
-
-        for statement in program.statements {
-            let object = self.eval_statement(&statement, &mut environment);
-            println!("Object: {:?}", object);
-        }
+        program
+            .statements
+            .iter()
+            .map(|statement| self.eval_statement(statement, &mut environment))
+            .collect()
     }
 
     pub fn new() -> Self {

@@ -2,10 +2,12 @@ use std::fs;
 use std::io::Write;
 use std::io::{self, stdin};
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 use clap::{self, Parser};
 use dhakal_lang::eval::Eval;
 use dhakal_lang::lexer::Lexer;
+use dhakal_lang::object::Object;
 
 #[derive(clap::Parser)]
 #[command(name = "Dhakal Lang")]
@@ -13,6 +15,29 @@ use dhakal_lang::lexer::Lexer;
 struct Args {
     /// Path to the file
     path: Option<PathBuf>,
+}
+
+fn run(source: String, evaluator: &mut Eval) -> Vec<Object> {
+    let mut lexer = Lexer::new(source);
+    let mut parser = dhakal_lang::parser::Parser::new(&mut lexer);
+    let program = parser.parse_program();
+
+    if !parser.errors.is_empty() {
+        for error in &parser.errors {
+            eprintln!("parse error: {error}");
+        }
+        return Vec::new();
+    }
+
+    evaluator.eval_program(program)
+}
+
+fn print_results(results: Vec<Object>) {
+    for object in results {
+        if !matches!(object, Object::Null) {
+            println!("{object}");
+        }
+    }
 }
 
 fn repl() {
@@ -25,32 +50,49 @@ fn repl() {
         io::stdout().flush().unwrap();
 
         let mut input = String::new();
-        stdin().read_line(&mut input).unwrap();
+        match stdin().read_line(&mut input) {
+            Ok(0) => {
+                println!();
+                return;
+            }
+            Ok(_) => {}
+            Err(error) => {
+                eprintln!("read error: {error}");
+                return;
+            }
+        }
 
-        let mut lexer = Lexer::new(input.to_string());
+        if input.trim().is_empty() {
+            continue;
+        }
 
-        let mut parser = dhakal_lang::parser::Parser::new(&mut lexer);
-        let program = parser.parse_program();
-
-        evaluator.eval_program(program);
+        print_results(run(input, &mut evaluator));
     }
 }
 
-fn main() {
+fn main() -> ExitCode {
     let args = Args::parse();
 
-    if args.path.is_none() {
+    let Some(path) = args.path else {
         repl();
-        return;
-    }
-
-    let path = args.path.unwrap();
+        return ExitCode::SUCCESS;
+    };
 
     if !path.exists() {
-        println!("The file doesn't exists");
+        eprintln!("file not found: {}", path.display());
+        return ExitCode::FAILURE;
     }
 
-    let contents = fs::read_to_string(path).unwrap();
+    let contents = match fs::read_to_string(&path) {
+        Ok(contents) => contents,
+        Err(error) => {
+            eprintln!("failed to read {}: {error}", path.display());
+            return ExitCode::FAILURE;
+        }
+    };
 
-    println!("Contents: {contents}");
+    let mut evaluator = Eval::new();
+    print_results(run(contents, &mut evaluator));
+
+    ExitCode::SUCCESS
 }
