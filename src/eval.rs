@@ -85,8 +85,8 @@ impl Eval {
                     parameters: func.parameters.iter().map(|v| v.value.clone()).collect(),
                     body: func.body.clone(),
                 };
-                self.functions.insert(func.name.value.clone(), obj.clone());
-                obj
+                self.functions.insert(func.name.value.clone(), obj);
+                Object::Null
             }
             Expression::Call(call) => {
                 if call.name.value == "print" {
@@ -159,11 +159,11 @@ impl Eval {
                 let exp = self.eval_expression(&return_statement.return_value, environment);
                 Object::Return(Box::new(exp))
             }
-            Statement::Let(let_statement) => {
-                let value = self.eval_expression(&let_statement.value, environment);
+            Statement::Val(val_statement) => {
+                let value = self.eval_expression(&val_statement.value, environment);
                 environment
                     .bindings
-                    .insert(let_statement.name.value.clone(), value);
+                    .insert(val_statement.name.value.clone(), value);
                 Object::Null
             }
             Statement::If(if_statement) => {

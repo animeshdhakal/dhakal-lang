@@ -1,8 +1,8 @@
 use crate::{
     ast::{
         CallExpression, Expression, ExpressionStatement, FunctionExpression, Identifier,
-        IfStatement, InfixExpression, LetStatement, PrefixExpression, Program, ReturnStatement,
-        Statement,
+        IfStatement, InfixExpression, PrefixExpression, Program, ReturnStatement, Statement,
+        ValStatement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -70,7 +70,7 @@ impl<'a> Parser<'a> {
         self.peek_token = self.lexer.next_token();
     }
 
-    pub fn parse_let_statement(&mut self) -> Option<Statement> {
+    pub fn parse_val_statement(&mut self) -> Option<Statement> {
         if !self.expect_peek(TokenType::Identifier) {
             self.errors
                 .push(format!("Expected Identifier but not found"));
@@ -91,7 +91,7 @@ impl<'a> Parser<'a> {
 
         let expression = self.parse_expression(Precedence::Lowest)?;
 
-        Some(Statement::Let(LetStatement {
+        Some(Statement::Val(ValStatement {
             value: expression,
             name: Identifier { value: name },
         }))
@@ -335,7 +335,7 @@ impl<'a> Parser<'a> {
 
     pub fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.token_type {
-            TokenType::Let => self.parse_let_statement(),
+            TokenType::Val => self.parse_val_statement(),
             TokenType::Return => self.parse_return_statement(),
             TokenType::If => self.parse_if_statement(),
             _ => self.parse_expression_statement(),

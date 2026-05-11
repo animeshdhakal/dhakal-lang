@@ -117,8 +117,8 @@ impl Lexer {
                 if self.ch.is_ascii_alphabetic() {
                     let identifier = self.read_identifier();
                     let token_type = match identifier.as_str() {
-                        "fn" => TokenType::Function,
-                        "let" => TokenType::Let,
+                        "func" => TokenType::Function,
+                        "val" => TokenType::Val,
                         "true" => TokenType::True,
                         "false" => TokenType::False,
                         "if" => TokenType::If,

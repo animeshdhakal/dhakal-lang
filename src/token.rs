@@ -35,7 +35,7 @@ pub enum TokenType {
 
     // Keywords
     Function,
-    Let,
+    Val,
     True,
     False,
     Return,

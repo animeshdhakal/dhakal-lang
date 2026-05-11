@@ -54,7 +54,7 @@ pub struct ExpressionStatement {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct LetStatement {
+pub struct ValStatement {
     pub name: Identifier,
     pub value: Expression,
 }
@@ -66,7 +66,7 @@ pub struct ReturnStatement {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Statement {
-    Let(LetStatement),
+    Val(ValStatement),
     Return(ReturnStatement),
     If(IfStatement),
     Expression(ExpressionStatement),
