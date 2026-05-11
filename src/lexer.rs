@@ -106,6 +106,16 @@ impl Lexer {
             b'-' => mk(TokenType::Minus, "-"),
             b'*' => mk(TokenType::Asterisk, "*"),
             b'/' => mk(TokenType::Slash, "/"),
+            b'`' => {
+                self.read_char();
+                while self.ch != b'`' && self.ch != 0 {
+                    self.read_char();
+                }
+                if self.ch == b'`' {
+                    self.read_char();
+                }
+                return self.next_token();
+            }
             b'{' => mk(TokenType::LeftBrace, "{"),
             b'}' => mk(TokenType::RightBrace, "}"),
             b'[' => mk(TokenType::LeftBracket, "["),
