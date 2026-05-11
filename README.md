@@ -1,7 +1,4 @@
 # Dhakal Lang
-
-By [animeshdhakal](https://github.com/animeshdhakal) (theanimeshdhakal@gmail.com)
-
 Dhakal Lang is a lightweight, hobbyist programming language built in Rust. It's designed to be simple, clean, and approachable for anyone curious about how programming languages work under the hood.
 
 ## Why Dhakal Lang?
