@@ -75,6 +75,29 @@ impl<'a> Parser<'a> {
         self.peek_token = self.lexer.next_token();
     }
 
+    pub fn parse_array_expression(&mut self) -> Option<Expression> {
+        let mut elements = Vec::new();
+        self.next_token();
+
+        if self.current_token.token_type == TokenType::RightBracket {
+            return Some(Expression::Array(elements));
+        }
+
+        elements.push(self.parse_expression(Precedence::Lowest)?);
+
+        while self.peek_token.token_type == TokenType::Comma {
+            self.next_token();
+            self.next_token();
+            elements.push(self.parse_expression(Precedence::Lowest)?);
+        }
+
+        if !self.expect_peek(TokenType::RightBracket) {
+            return None;
+        }
+
+        Some(Expression::Array(elements))
+    }
+
     pub fn parse_val_statement(&mut self) -> Option<Statement> {
         if !self.expect_peek(TokenType::Identifier) {
             return None;
@@ -288,11 +311,15 @@ impl<'a> Parser<'a> {
     pub fn parse_expression_statement(&mut self) -> Option<Statement> {
         let expression = self.parse_expression(Precedence::Lowest)?;
 
-        if self.peek_token.token_type == TokenType::Semicolon {
+        let has_semicolon = self.peek_token.token_type == TokenType::Semicolon;
+        if has_semicolon {
             self.next_token();
         }
 
-        Some(Statement::Expression(ExpressionStatement { expression }))
+        Some(Statement::Expression(ExpressionStatement {
+            expression,
+            has_semicolon,
+        }))
     }
 
     pub fn parse_prefix_expression(&mut self) -> Option<Expression> {
@@ -305,6 +332,7 @@ impl<'a> Parser<'a> {
             TokenType::Bang => self.parse_prefix(),
             TokenType::Minus => self.parse_prefix(),
             TokenType::LeftParenthesis => self.parse_grouped_expression(),
+            TokenType::LeftBracket => self.parse_array_expression(),
             TokenType::Function => self.parse_function_expression(),
             _ => {
                 let msg = format!(
@@ -340,6 +368,7 @@ impl<'a> Parser<'a> {
         let mut left_expression = self.parse_prefix_expression()?;
 
         while self.peek_token.token_type != TokenType::Semicolon
+            && self.peek_token.token_type != TokenType::Comma
             && (precedence as u32) < (get_precedence(&self.peek_token) as u32)
         {
             self.next_token();

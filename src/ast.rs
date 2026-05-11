@@ -42,6 +42,7 @@ pub enum Expression {
     String(String),
     Boolean(bool),
     Integer(u64),
+    Array(Vec<Expression>),
     Prefix(PrefixExpression),
     Infix(InfixExpression),
     Function(FunctionExpression),
@@ -51,6 +52,7 @@ pub enum Expression {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExpressionStatement {
     pub expression: Expression,
+    pub has_semicolon: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

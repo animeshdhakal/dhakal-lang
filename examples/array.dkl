@@ -1,0 +1,10 @@
+
+val a = [1, 2, 4, 5];
+push(a, 1);
+write(a);
+
+val b = get(a, 0);
+write(b);
+
+pop(a);
+write(a);

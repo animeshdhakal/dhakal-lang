@@ -1,0 +1,92 @@
+func sum(arr) {
+    val total = 0;
+    for (val i = 0; i < len(arr); val i = i + 1) {
+        val total = total + get(arr, i);
+    }
+    return total;
+}
+
+func max(arr) {
+    val best = get(arr, 0);
+    for (val i = 1; i < len(arr); val i = i + 1) {
+        val current = get(arr, i);
+        if (current > best) {
+            val best = current;
+        }
+    }
+    return best;
+}
+
+func min(arr) {
+    val best = get(arr, 0);
+    for (val i = 1; i < len(arr); val i = i + 1) {
+        val current = get(arr, i);
+        if (current < best) {
+            val best = current;
+        }
+    }
+    return best;
+}
+
+func sort(arr) {
+    val n = len(arr);
+    for (val i = 0; i < n; val i = i + 1) {
+        for (val j = 0; j < n - i - 1; val j = j + 1) {
+            val a = get(arr, j);
+            val b = get(arr, j + 1);
+            if (a > b) {
+                set(arr, j, b);
+                set(arr, j + 1, a);
+            }
+        }
+    }
+    return arr;
+}
+
+func reverse(arr) {
+    val out = [];
+    for (val i = len(arr) - 1; i >= 0; val i = i - 1) {
+        push(out, get(arr, i));
+    }
+    return out;
+}
+
+func is_prime(n) {
+    if (n < 2) {
+        return false;
+    }
+    for (val d = 2; d * d <= n; val d = d + 1) {
+        if (n - (n / d) * d == 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+func primes_up_to(limit) {
+    val result = [];
+    for (val n = 2; n <= limit; val n = n + 1) {
+        if (is_prime(n)) {
+            push(result, n);
+        }
+    }
+    return result;
+}
+
+val numbers = [42, 7, 19, 3, 88, 11, 56, 23, 4, 67];
+
+write("input:   ", numbers);
+write("count:   ", len(numbers));
+write("sum:     ", sum(numbers));
+write("min:     ", min(numbers));
+write("max:     ", max(numbers));
+
+sort(numbers);
+write("sorted:  ", numbers);
+write("reversed:", reverse(numbers));
+
+val popped = pop(numbers);
+write("popped:  ", popped);
+write("after:   ", numbers);
+
+write("primes <= 50:", primes_up_to(50));
