@@ -35,6 +35,8 @@ pub fn get_precedence(token: &Token) -> Precedence {
 
         TokenType::GreaterThan => Precedence::LessGreater,
         TokenType::LessThan => Precedence::LessGreater,
+        TokenType::GreaterThanOrEqual => Precedence::LessGreater,
+        TokenType::LessThanOrEqual => Precedence::LessGreater,
 
         TokenType::Plus => Precedence::Sum,
         TokenType::Minus => Precedence::Sum,
@@ -51,9 +53,9 @@ pub fn get_precedence(token: &Token) -> Precedence {
 impl<'a> Parser<'a> {
     pub fn new(lexer: &'a mut Lexer) -> Self {
         let mut parser = Parser {
-            lexer: lexer,
-            current_token: Token::new(TokenType::Illegal, "".to_string()),
-            peek_token: Token::new(TokenType::Illegal, "".to_string()),
+            lexer,
+            current_token: Token::new(TokenType::Illegal, String::new()),
+            peek_token: Token::new(TokenType::Illegal, String::new()),
             errors: Vec::new(),
         };
 
@@ -65,7 +67,7 @@ impl<'a> Parser<'a> {
 
     pub fn next_token(&mut self) {
         self.current_token = self.peek_token.clone();
-        self.peek_token = self.lexer.next_token().clone();
+        self.peek_token = self.lexer.next_token();
     }
 
     pub fn parse_let_statement(&mut self) -> Option<Statement> {
@@ -87,36 +89,24 @@ impl<'a> Parser<'a> {
 
         self.next_token();
 
-        let expression = self.parse_expression(Precedence::Lowest);
+        let expression = self.parse_expression(Precedence::Lowest)?;
 
-        if expression.is_none() {
-            return None;
-        }
-
-        let expression = expression.unwrap();
-
-        let statement = LetStatement {
+        Some(Statement::Let(LetStatement {
             value: expression,
             name: Identifier { value: name },
-        };
-
-        Some(Statement::Let(statement))
+        }))
     }
 
     pub fn parse_grouped_expression(&mut self) -> Option<Expression> {
         self.next_token();
 
-        let expression = self.parse_expression(Precedence::Lowest);
-
-        if expression.is_none() {
-            return None;
-        }
+        let expression = self.parse_expression(Precedence::Lowest)?;
 
         if !self.expect_peek(TokenType::RightParenthesis) {
             return None;
         }
 
-        expression
+        Some(expression)
     }
 
     pub fn parse_if_expression(&mut self) -> Option<Expression> {
@@ -277,17 +267,9 @@ impl<'a> Parser<'a> {
 
     pub fn parse_return_statement(&mut self) -> Option<Statement> {
         self.next_token();
-        let expression = self.parse_expression(Precedence::Lowest);
+        let return_value = self.parse_expression(Precedence::Lowest)?;
 
-        if expression.is_none() {
-            return None;
-        }
-
-        let expression = expression.unwrap();
-
-        Some(Statement::Return(ReturnStatement {
-            return_value: expression,
-        }))
+        Some(Statement::Return(ReturnStatement { return_value }))
     }
 
     pub fn parse_expression_statement(&mut self) -> Option<Statement> {
@@ -325,6 +307,8 @@ impl<'a> Parser<'a> {
             TokenType::NotEquals => self.parse_infix(left),
             TokenType::GreaterThan => self.parse_infix(left),
             TokenType::LessThan => self.parse_infix(left),
+            TokenType::GreaterThanOrEqual => self.parse_infix(left),
+            TokenType::LessThanOrEqual => self.parse_infix(left),
             TokenType::LeftParenthesis => self.parse_call_expression(left),
             _ => None,
         }
@@ -389,43 +373,31 @@ impl<'a> Parser<'a> {
         Some(Expression::Integer(IntegerLiteral { value: integer }))
     }
     pub fn parse_boolean(&mut self) -> Option<Expression> {
-        let value = match self.current_token.token_type {
-            TokenType::True => true,
-            _ => false,
-        };
+        let value = self.current_token.token_type == TokenType::True;
         Some(Expression::Boolean(BooleanLiteral { value }))
     }
 
     pub fn parse_prefix(&mut self) -> Option<Expression> {
         let operator = self.current_token.literal.clone();
-
         self.next_token();
+        let right = self.parse_expression(Precedence::Prefix)?;
 
-        if let Some(expression) = self.parse_expression(Precedence::Prefix) {
-            return Some(Expression::Prefix(PrefixExpression {
-                operator,
-                right: Box::new(expression),
-            }));
-        }
-
-        None
+        Some(Expression::Prefix(PrefixExpression {
+            operator,
+            right: Box::new(right),
+        }))
     }
 
     pub fn parse_infix(&mut self, left: Expression) -> Option<Expression> {
         let operator = self.current_token.literal.clone();
-
         let precedence = get_precedence(&self.current_token);
-
         self.next_token();
+        let right = self.parse_expression(precedence)?;
 
-        if let Some(expression) = self.parse_expression(precedence) {
-            return Some(Expression::Infix(InfixExpression {
-                left: Box::new(left),
-                operator,
-                right: Box::new(expression),
-            }));
-        }
-
-        None
+        Some(Expression::Infix(InfixExpression {
+            left: Box::new(left),
+            operator,
+            right: Box::new(right),
+        }))
     }
 }

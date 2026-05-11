@@ -86,8 +86,22 @@ impl Lexer {
             b'}' => Token::new(TokenType::RightBrace, "}".to_string()),
             b'[' => Token::new(TokenType::LeftBracket, "[".to_string()),
             b']' => Token::new(TokenType::RightBracket, "]".to_string()),
-            b'>' => Token::new(TokenType::GreaterThan, ">".to_string()),
-            b'<' => Token::new(TokenType::LessThan, "<".to_string()),
+            b'>' => {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::new(TokenType::GreaterThanOrEqual, ">=".to_string())
+                } else {
+                    Token::new(TokenType::GreaterThan, ">".to_string())
+                }
+            }
+            b'<' => {
+                if self.peek_char() == b'=' {
+                    self.read_char();
+                    Token::new(TokenType::LessThanOrEqual, "<=".to_string())
+                } else {
+                    Token::new(TokenType::LessThan, "<".to_string())
+                }
+            }
             0 => Token::new(TokenType::Eof, "".to_string()),
             _ => {
                 if self.ch.is_ascii_alphabetic() {
