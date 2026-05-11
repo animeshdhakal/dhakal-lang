@@ -1,8 +1,8 @@
 use crate::{
     ast::{
-        CallExpression, Expression, ExpressionStatement, FunctionExpression, Identifier,
-        IfStatement, InfixExpression, PrefixExpression, Program, ReturnStatement, Statement,
-        ValStatement,
+        CallExpression, Expression, ExpressionStatement, ForStatement, FunctionExpression,
+        Identifier, IfStatement, InfixExpression, PrefixExpression, Program, ReturnStatement,
+        Statement, ValStatement,
     },
     lexer::Lexer,
     token::{Token, TokenType},
@@ -333,11 +333,48 @@ impl<'a> Parser<'a> {
         Some(left_expression)
     }
 
+    pub fn parse_for_statement(&mut self) -> Option<Statement> {
+        if !self.expect_peek(TokenType::LeftParenthesis) {
+            return None;
+        }
+
+        self.next_token();
+
+        let initialization = self.parse_statement()?;
+
+        self.next_token();
+        self.next_token();
+
+        let condition = self.parse_expression(Precedence::Lowest)?;
+
+        self.next_token();
+        self.next_token();
+
+        let update = self.parse_statement()?;
+        self.next_token();
+
+        if !self.expect_peek(TokenType::LeftBrace) {
+            return None;
+        }
+
+        let body = self.parse_block_statement();
+
+        self.next_token();
+
+        Some(Statement::For(ForStatement {
+            initialization: Box::new(initialization),
+            condition,
+            update: Box::new(update),
+            body,
+        }))
+    }
+
     pub fn parse_statement(&mut self) -> Option<Statement> {
         match self.current_token.token_type {
             TokenType::Val => self.parse_val_statement(),
             TokenType::Return => self.parse_return_statement(),
             TokenType::If => self.parse_if_statement(),
+            TokenType::For => self.parse_for_statement(),
             _ => self.parse_expression_statement(),
         }
     }

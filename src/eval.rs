@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{BinaryHeap, HashMap};
 
 use crate::ast::{Expression, Program, Statement};
 use crate::object::Object;
@@ -180,6 +180,30 @@ impl Eval {
                 };
 
                 self.eval_block(branch, environment)
+            }
+
+            Statement::For(for_statement) => {
+                let mut isolated_enivornment = Environment {
+                    bindings: environment.bindings.clone(),
+                };
+
+                self.eval_statement(&for_statement.initialization, &mut isolated_enivornment);
+
+                loop {
+                    let Object::Boolean(value) =
+                        self.eval_expression(&for_statement.condition, &mut isolated_enivornment)
+                    else {
+                        return Object::Null;
+                    };
+
+                    if !value {
+                        break;
+                    }
+
+                    self.eval_block(&for_statement.body, &mut isolated_enivornment);
+                    self.eval_statement(&for_statement.update, &mut isolated_enivornment);
+                }
+                Object::Null
             }
         }
     }

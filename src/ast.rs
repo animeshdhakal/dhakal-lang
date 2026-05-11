@@ -65,11 +65,20 @@ pub struct ReturnStatement {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ForStatement {
+    pub initialization: Box<Statement>,
+    pub condition: Expression,
+    pub update: Box<Statement>,
+    pub body: Vec<Statement>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Statement {
     Val(ValStatement),
     Return(ReturnStatement),
     If(IfStatement),
     Expression(ExpressionStatement),
+    For(ForStatement),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

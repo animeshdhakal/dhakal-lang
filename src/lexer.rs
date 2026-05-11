@@ -124,6 +124,7 @@ impl Lexer {
                         "if" => TokenType::If,
                         "else" => TokenType::Else,
                         "return" => TokenType::Return,
+                        "for" => TokenType::For,
                         _ => TokenType::Identifier,
                     };
                     return Token::new(token_type, identifier);

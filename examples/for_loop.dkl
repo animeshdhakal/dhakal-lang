@@ -1,0 +1,4 @@
+
+for(val i = 0; i < 10; val i = i + 1) {
+	print("Hello Animesh: ", i);
+}

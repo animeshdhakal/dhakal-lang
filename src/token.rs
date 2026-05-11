@@ -41,6 +41,7 @@ pub enum TokenType {
     Return,
     Else,
     If,
+    For,
 }
 
 #[derive(Debug, Clone)]
